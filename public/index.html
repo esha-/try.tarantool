@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta charset="utf-8">
+    <title>Tarantoo try-terminal</title>
+    <meta name="Description" content="Tarantool try-terminal">
+    <link rel="sitemap" type="application/xml" title="Sitemap" href="">
+    <script src="http://code.jquery.com/jquery-1.11.1.js"></script>
+    <script src="./js/jquery.mousewheel-min.js"></script>
+    <script src="./js/jquery.terminal-min.js"></script>
+    <script src="http://yamltojson.com/js/yaml.js"></script>
+    <link href="./css/jquery.terminal.css" rel="stylesheet">
+  </head>
+<body class="terminal">
+
+<script>
+jQuery(document).ready(function($) {
+    var id = 1;
+    $('body').terminal(function(command, term) {
+        if (command) {
+        	//term.echo(" why are you alive *?");
+		//term.echo("/tarantool?command="+command)
+    		$.get( "/tarantool?command"+"="+command,{},
+			function(data) {
+				//dat = YAML.parse(data);
+				term.echo(data);
+			}, 'text');
+	} 
+	//term.echo("kcuf");
+    }, {
+        greetings: "Tarantool terminal",
+        height: 200,
+        prompt: 'tarantool> '
+    });
+});
+
+</script>
+
+</body></html>
