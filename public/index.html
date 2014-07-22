@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
     <meta charset="utf-8">
-    <title>Tarantoo try-terminal</title>
+    <title>Tarantool try-terminal</title>
     <meta name="Description" content="Tarantool try-terminal">
     <link rel="sitemap" type="application/xml" title="Sitemap" href="">
     <script src="http://code.jquery.com/jquery-1.11.1.js"></script>
@@ -14,23 +14,19 @@
 
 <script>
 jQuery(document).ready(function($) {
-    var id = 1;
-    $('body').terminal(function(command, term) {
-        if (command) {
-        	//term.echo(" why are you alive *?");
-		//term.echo("/tarantool?command="+command)
+    $('body').terminal(
+        function(command, term) {
+          if (command) {
     		$.get( "/tarantool?command"+"="+command,{},
 			function(data) {
-				//dat = YAML.parse(data);
 				term.echo(data);
 			}, 'text');
-	} 
-	//term.echo("kcuf");
-    }, {
-        greetings: "Tarantool terminal",
+    	  }
+        }, {
+        greetings: "Tarantool terminal\n=======================================",
         height: 200,
         prompt: 'tarantool> '
-    });
+        });
 });
 
 </script>
