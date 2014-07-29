@@ -13,10 +13,11 @@ local socket = require('socket')
 local yaml = require('yaml')
 local os = require('os')
 
-box.cfg{
+return { start = function() 
+--[[box.cfg{
     admin_port = "3313",
     --logger="tarantool_server.log";
-}
+}--]]
 
 local server = require('http.server')
 
@@ -29,12 +30,14 @@ local sock = {}
 -- Function start container
 
 local function start_container(user_id, user_ip)
-	local file = io.popen('sudo /usr/local/try-tarantool-org/container/tool.sh start')
+	--[[local file = io.popen('sudo /usr/local/try-tarantool-org/container/tool.sh start')
 	inf = file:read("*a")
 	file:close()
 	inf = json.decode(inf)
 	host = inf[1]['NetworkSettings']['IPAddress']
-	lxc_id = inf[1]['ID']
+	lxc_id = inf[1]['ID']--]]
+	host = '127.0.0.1'
+	lxc_id = '1'
 	log.info('%s: Start container with ID = %s ', user_id, lxc_id)
 	t = {host = host, ip = user_ip, lxc_id = lxc_id}
 	lxc[user_id] = t
@@ -84,6 +87,7 @@ function get_container (user_id, user_ip)
 	local lxc_id = nil
 	local ip ='0'
 	local t = {}
+	
 	if lxc[user_id] then --Check availability linux conteiner for user_id
 		host = lxc[user_id].host
 		lxc_id = lxc[user_id].lxc_id
@@ -121,12 +125,13 @@ end
 -- Get answer from tarantool to the command request
 
 function get_answer (self, user_id, socket_host, lxc_id)
-    local s = get_socket(self, user_id, socket_host)
+    print('Start get answer')
+	local s = get_socket(self, user_id, socket_host)
 	if not s then -- Check available socket connection for user_id and remove this container 
 		data = 'errors'
 		---data = 'Sorry! Server have problem. Please update web pages.'
 		log.info(data)
-		remove_container(lxc_id)
+		--remove_container(lxc_id)
 		return data
 	end 
 	local command = self.req:param('command')
@@ -140,13 +145,14 @@ end
 -- Handler for request from try.tarantool page   
 
 function handler (self)
-	local user_ip = self.req.peer.host
+	print ('This is handler')
+	local user_ip = '127.0.0.1'
 	local host = nil
 	local lxc_id = nil
-	ipt[user_ip] = 1
-
+	if not ipt[user_ip] then ipt[user_ip] = 1 end
+	log.info('user_ip = %s', user_ip)
     local user_id = self:cookie('id')  -- Set or get cookie   
-    
+    print (user_id)
 	if user_id == nil then
 		ipt[user_ip] = ipt[user_ip] + 1 -- Check limit (5 users) for one ip adress 
 		log.info('Have %s session on this ip = %s', ipt[user_ip], user_ip) 
@@ -164,23 +170,27 @@ function handler (self)
 	log.info('user_id = %s', user_id)
     log.info('%s: Started and get answer', user_id)
 	host, lxc_id = get_container(user_id, user_ip)
-    data = get_answer(self, user_id, host, lxc_id)
+	data = get_answer(self, user_id, host, lxc_id)
     --log.info('%s',yaml.encode(self))
     return self:render({ text = data })
 end
 
 -- Start tarantool server
 
-server_host = '188.93.56.54'
+server_host = 'localhost'
 server_port = '12345'
-log.info('Started http server at host = %s and port = %s ', server_host, server_port)
 httpd = server.new(server_host, server_port, {app_dir = '.'})
+log.info('Started http server at host = %s and port = %s ', server_host, server_port)
 
 -- Start fiber for remove unused containers
 
-remove = fiber.create(clear_lxc)
+--remove = fiber.create(clear_lxc)
 
 httpd:route({ path = '', file = '/index.html'})
 --httpd:route({ path = '/tarantool'}, "module#hello")
 httpd:route({ path = '/tarantool' }, handler)
 httpd:start()
+
+end
+
+}
