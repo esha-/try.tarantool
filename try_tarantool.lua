@@ -13,10 +13,12 @@ local socket = require('socket')
 local yaml = require('yaml')
 local os = require('os')
 
-box.cfg{
+return {
+start = function(test)
+--[[box.cfg{
     admin_port = "3313",
     --logger="tarantool_server.log";
-}
+}--]]
 
 local server = require('http.server')
 
@@ -62,7 +64,7 @@ end
 
 -- Function remove all container that not used
 
-function clear_lxc()
+local function clear_lxc()
 while 1 do
 	log.info('Started remove unused container')
 	t = os.time()
@@ -79,7 +81,7 @@ end
 
 -- Get conteiner host
 
-function get_container (user_id, user_ip)
+local function get_container (user_id, user_ip)
 	local host = nil
 	local lxc_id = nil
 	local ip ='0'
@@ -105,10 +107,10 @@ local function get_socket(self, user_id, socket_host)
 	if not s then
 		fiber.sleep(0.3)
 		local i = 0
-		while (i <= 10) do
+		while (i <= 100) do
 			s = socket.tcp_connect(socket_host, port, 100)
 			log.info('%s: Started socket on host %s port %s', user_id, socket_host, port)
-			if s then i = 11 else i = i + 1 end 
+			if s then break else i = i + 1 end 
 		end
 	end
 	lxc[user_id].socket = s
@@ -126,7 +128,11 @@ function get_answer (self, user_id, socket_host, lxc_id)
 		data = 'errors'
 		---data = 'Sorry! Server have problem. Please update web pages.'
 		log.info(data)
-		remove_container(lxc_id)
+		if test == 0 then
+			lxc[user_id] = nil 
+		else
+			remove_container(lxc_id)
+		end
 		return data
 	end 
 	local command = self.req:param('command')
@@ -140,47 +146,67 @@ end
 -- Handler for request from try.tarantool page   
 
 function handler (self)
-	local user_ip = self.req.peer.host
+	log.info('Start handler')
+	local user_ip = nil
+	if test == 0 then
+		user_ip = self.req.peer.host
+	else
+		user_ip = '127.0.0.1'
+	end
 	local host = nil
 	local lxc_id = nil
-	ipt[user_ip] = 1
+	if not ipt[user_ip] then ipt[user_ip] = 0 end
 
     local user_id = self:cookie('id')  -- Set or get cookie   
-    
+	
 	if user_id == nil then
+		log.info ('Set cookie for ip = %s', user_ip)
+		math.randomseed(tonumber(require('fiber').time64()))
+		user_id = user_ip..'//'..tostring(math.random(0, 65000))
+		 --id = digest.sha1_hex(math.random(0, 65000))
+		self:cookie({ name = 'id', value = user_id, expires = '+1y' })
+	end 
+ 
+	log.info('user_id = %s', user_id)
+	print (lxc[user_id])
+	if not lxc[user_id] then
 		ipt[user_ip] = ipt[user_ip] + 1 -- Check limit (5 users) for one ip adress 
-		log.info('Have %s session on this ip = %s', ipt[user_ip], user_ip) 
-		if ipt[user_ip] >= 4 then
+		log.info('Have %s session on this ip = %s', ipt[user_ip], user_ip)
+		if ipt[user_ip] > 5 then
 		data = 'Sorry! Users limit exceeded! Please, close some session'
 		return self:render({ text = data })
 		end
-		log.info ('Set cookie for ip = %s', user_ip)
-		math.randomseed(tonumber(require('fiber').time64()))
-       	user_id = user_ip..'//'..tostring(math.random(0, 65000))
-	   	--id = digest.sha1_hex(math.random(0, 65000))
-       	self:cookie({ name = 'id', value = user_id, expires = '+1y' })
-    end
+	end
 
-	log.info('user_id = %s', user_id)
-    log.info('%s: Started and get answer', user_id)
-	host, lxc_id = get_container(user_id, user_ip)
-    data = get_answer(self, user_id, host, lxc_id)
+	if test == 0 then
+		host, lxc_id = get_container(user_id, user_ip)
+    else
+		host = 'localhost'
+		lxc_id = '1'
+		t = {host = host, ip = user_ip, lxc_id = lxc_id}
+		lxc[user_id] = t
+	end
+	log.info('%s: Started and get answer', user_id)
+	data = get_answer(self, user_id, host, lxc_id)
     --log.info('%s',yaml.encode(self))
     return self:render({ text = data })
 end
 
 -- Start tarantool server
 
-server_host = '188.93.56.54'
+if test == 0 then server_host = '188.93.56.54'
+else server_host = '127.0.0.1' end
 server_port = '12345'
-log.info('Started http server at host = %s and port = %s ', server_host, server_port)
 httpd = server.new(server_host, server_port, {app_dir = '.'})
+log.info('Started http server at host = %s and port = %s ', server_host, server_port)
 
 -- Start fiber for remove unused containers
 
-remove = fiber.create(clear_lxc)
+if test == 0 then remove = fiber.create(clear_lxc) end
 
 httpd:route({ path = '', file = '/index.html'})
 --httpd:route({ path = '/tarantool'}, "module#hello")
 httpd:route({ path = '/tarantool' }, handler)
 httpd:start()
+end
+}
