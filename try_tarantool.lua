@@ -59,7 +59,7 @@ local function remove_container(user_id)
 	print (rm_lxc..lxc_id)
 	local file = io.popen(rm_lxc..lxc_id)
 	file:close()
-	ipt[lxc[user_id].ip] = ipt[lxc[user_id].ip] - 1
+	ipt[lxc[user_id].ip = ipt[lxc[user_id].ip] - 1
 	log.info('%s: Remove container with ID = %s', user_id, lxc_id)
 	lxc[user_id] = nil
 	for k,v in pairs(lxc) do 
