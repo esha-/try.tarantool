@@ -4,6 +4,7 @@
 -- such us tarantool terminal and try tarantool uses cases 
 
 local io = require('io')
+local os = require('os')
 local json = require('json')
 local math = require('math')
 local digest = require('digest')
@@ -11,27 +12,16 @@ local log = require('log')
 local fiber = require('fiber')
 local server = require('http.server')
 local socket = require('socket')
-local yaml = require('yaml')
-local os = require('os')
 
-local test = 0
-local server_host = nil
-local server_port = '11111'
-local container_port = '3313'
-local ip_limit = 5
-local socket_timeout = 0.2
-local start_lxc = 'sudo /usr/local/try-tarantool-org/container/tool.sh start ' 
-local rm_lxc = 'sudo /usr/local/try-tarantool-org/container/tool.sh stop '
+local SERVER_HOST = '188.93.56.54'
+local SERVER_PORT = '11111'
+local CONTAINER_PORT = '3313'
+local IP_LIMIT = 5
+local SOCKET_TIMEOUT = 0.2
+local START_LXC = 'sudo /usr/local/try-tarantool-org/container/tool.sh start ' 
+local RM_LXC = 'sudo /usr/local/try-tarantool-org/container/tool.sh stop '
 
--- 'test' is mark for starting try.tarantool in test session on localhost
-
-if test == 0 then 
-	server_host = '188.93.56.54'
-else 
-	server_host = '127.0.0.1'
-end
-
-local function start(test)
+local function start()
 
 local ipt = {} -- Table with information about users try.tarantool session on ip
 local lxc = {} -- Table with information about user: id, ip, linux container host and id, last connection time
@@ -39,7 +29,7 @@ local lxc = {} -- Table with information about user: id, ip, linux container hos
 -- Function start container
 
 local function start_container(user_id)
-	local file = io.popen(start_lxc)
+	local file = io.popen(START_LXC)
 	local inf = file:read("*a")
 	file:close()
 	inf = json.decode(inf)
@@ -57,7 +47,7 @@ local function remove_container(user_id)
 	local lxc_id = lxc[user_id].lxc_id
 	log.info(lxc_id)
 	print (rm_lxc..lxc_id)
-	local file = io.popen(rm_lxc..lxc_id)
+	local file = io.popen(RM_LXC..lxc_id)
 	file:close()
 	ipt[lxc[user_id].ip = ipt[lxc[user_id].ip] - 1
 	log.info('%s: Remove container with ID = %s', user_id, lxc_id)
@@ -90,11 +80,7 @@ function handler (self)
 	log.info('Start handler')
 	local user_ip = nil
 	
-	if test == 0 then
-		user_ip = self.req.peer.host
-	else
-		user_ip = '127.0.0.1'
-	end
+	user_ip = self.req.peer.host
 
 	local host = nil
 	local lxc_id = nil
@@ -125,20 +111,15 @@ function handler (self)
 		ipt[user_ip] = ipt[user_ip] + 1 
 		log.info('Have %s session on this ip = %s', ipt[user_ip], user_ip)	
 		
-		if test == 0 then
-			-- Start new container for user
-			host, lxc_id = start_container(user_id)
-            log.info('%s: User got new container with host = %s', usr_id, lxc[user_id].host)
-    	else
-			lxc[user_id].host = 'localhost'
-			lxc[user_id].lxc_id = '1'
-		end
+		-- Start new container for user
+		host, lxc_id = start_container(user_id)
+        log.info('%s: User got new container with host = %s', usr_id, lxc[user_id].host)
 		
 		local i = 0
  		while (i <= 10) do -- Start new socket connection
-				lxc[user_id].socket = socket.tcp_connect(lxc[user_id].host, container_port)
+				lxc[user_id].socket = socket.tcp_connect(lxc[user_id].host, CONTAINER_PORT)
 				log.info('%s: Started socket on host %s port %s', user_id, lxc[user_id].host, container_port)
-				if lxc[user_id].socket then break else i = i + 1 fiber.sleep(socket_timeout) end
+				if lxc[user_id].socket then break else i = i + 1 fiber.sleep(SOCKET_TIMEOUT) end
  		end
 		log.info ('%s: Soket = %s', user_id, lxc[user_id].socket)
 	else
@@ -152,11 +133,7 @@ function handler (self)
 	else 
 		log.info('%s: Hasnt socket conection', user_id)
 	 	data = 'errors'
-		if test == 1 then
-			lxc[user_id] = nil
-		else
-			remove_container(user_id)
-		end
+		remove_container(user_id)
 		return self:render({ text = data })
 	end
 
@@ -176,12 +153,12 @@ end
 
 -- Start tarantool server
 
-httpd = server.new(server_host, server_port, {app_dir = '.'})
-log.info('Started http server at host = %s and port = %s ', server_host, server_port)
+httpd = server.new(SERVER_HOST, SERVER_PORT, {app_dir = '.'})
+log.info('Started http server at host = %s and port = %s ', SERVER_HOST, SERVER_PORT)
 
 -- Start fiber for remove unused containers
 
-if test == 0 then clear = fiber.create(clear_lxc) end
+clear = fiber.create(clear_lxc) 
 
 httpd:route({ path = '', file = '/index.html'})
 httpd:route({ path = '/tarantool' }, handler)
@@ -190,7 +167,6 @@ httpd:start()
 end
 
 return {
-start = function (test)
-	start(test)
+start =	start()
 end
 }
