@@ -18,13 +18,14 @@ jQuery(document).ready(function($) {
 			function(data) {
 				if (data == 'errors')
 					alert('Sorry! Server have problem. Please update web page.');
-				//else alert('Welcome to tarantool try pages. Please, start work with Tarantool!')
 	});
 	$('body').terminal(
 		function(command, term) {
-		//$.get("/tarantool&command=help",{},function(data) {term.exho(data);});
           if (command) {
-    		$.get( "/tarantool",{command:command},
+			command = "/tarantool?command="+command
+			command = encodeURI(command)
+    		$.get(command,
+			//$.get( "/tarantool",{command:command},
 			function(data) {
 				console.log(data);
 				if (data == 'errors') term.echo('Sorry! Server have problem. Please update web pages.')	 

@@ -5,12 +5,11 @@ local client = require('http.client')
 local yaml = require('yaml')
 
 box.cfg{
-	admin = '33013',
+	log_level = 5,
 	--logger = 'test_try.log'
 }
 
 print(package.path)
---package.path = package.path .. ";./?.lua"
 local try = require('try_tarantool')
 
 try.start()

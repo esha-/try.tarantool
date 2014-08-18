@@ -35,26 +35,21 @@ local function start_container(user_id)
 	inf = json.decode(inf)
 	local host = inf[1]['NetworkSettings']['IPAddress']
 	local lxc_id = inf[1]['ID']
-	log.info('%s: Start container with ID = %s ', user_id, lxc_id)
-	local t = {host = host, ip = user_ip, lxc_id = lxc_id}
-	lxc[user_id] = t
-	for k,v in pairs(t) do print('\t',k,v) end
+	log.info('%s: Start container with host = %s lxc_id = %s ', user_id, host, lxc_id)
+	lxc[user_id]['host'] = host
+	lxc[user_id]['lxc_id'] = lxc_id
 end
 
 -- Function remove container
 
 local function remove_container(user_id)
 	local lxc_id = lxc[user_id].lxc_id
-	log.info(lxc_id)
-	print (rm_lxc..lxc_id)
+	log.info(RM_LXC..lxc_id)
 	local file = io.popen(RM_LXC..lxc_id)
 	file:close()
-	ipt[lxc[user_id].ip = ipt[lxc[user_id].ip] - 1
 	log.info('%s: Remove container with ID = %s', user_id, lxc_id)
+	ipt[lxc[user_id].ip] = ipt[lxc[user_id].ip] - 1
 	lxc[user_id] = nil
-	for k,v in pairs(lxc) do 
-	print (k, v)
-	end
 end
 
 -- Function remove all container that not used
@@ -64,13 +59,12 @@ while 1 do
 	log.info('Started remove unused container')
 	t = os.time()
 	for k,v in pairs(lxc) do
-		print(v.time, t)
-		if (t - v.time) >= 1800 then
+		if (t - v.time) >= 10 then
 			remove_container(k)
 		end
 	end
 	log.info('Stopped remove unused conainer')
-	fiber.sleep(1800)
+	fiber.sleep(20)
 end
 end
 
@@ -89,9 +83,9 @@ function handler (self)
 
 	if not ipt[user_ip] then ipt[user_ip] = 0 end
 
-    local user_id = self:cookie('id')  -- Set or get cookie with id information  
+    local user_id = self:cookie('id')  -- Get cookie with id information  
 	
-	if user_id == nil then
+	if user_id == nil then -- Set cookie with id for new users
 		log.info ('Set cookie for ip = %s', user_ip)
 		math.randomseed(tonumber(require('fiber').time64()))
 		user_id = user_ip..'//'..tostring(math.random(0, 65000))
@@ -99,8 +93,6 @@ function handler (self)
 		self:cookie({ name = 'id', value = user_id, expires = '+1y' })
 	end 
 	log.info('user_id = %s', user_id)
-
-	print (lxc[user_id])
 
 	if not lxc[user_id] then
 		-- Check limit (5 users) for one ip adress 
@@ -110,19 +102,17 @@ function handler (self)
 		end
 		ipt[user_ip] = ipt[user_ip] + 1 
 		log.info('Have %s session on this ip = %s', ipt[user_ip], user_ip)	
-		
+		lxc[user_id] = {ip = user_ip}
 		-- Start new container for user
 		host, lxc_id = start_container(user_id)
-        log.info('%s: User got new container with host = %s', usr_id, lxc[user_id].host)
+        log.info('%s: User got new container with host = %s', user_id, lxc[user_id].host)
 		
 		local i = 0
  		while (i <= 10) do -- Start new socket connection
 				lxc[user_id].socket = socket.tcp_connect(lxc[user_id].host, CONTAINER_PORT)
-				log.info('%s: Started socket on host %s port %s', user_id, lxc[user_id].host, container_port)
+				log.info('%s: Started socket on host %s port %s', user_id, lxc[user_id].host, CONTAINER_PORT)
 				if lxc[user_id].socket then break else i = i + 1 fiber.sleep(SOCKET_TIMEOUT) end
  		end
-		log.info ('%s: Soket = %s', user_id, lxc[user_id].socket)
-	else
 		--User get container from container table(lxc[])
 		log.info('%s: User got container with host = %s', user_id, lxc[user_id].host)
 	end
@@ -142,7 +132,7 @@ function handler (self)
 	local command = self.req:param('command')
 	log.info('%s: Getting command <%s>', user_id, command)
 	lxc[user_id].socket: write(command..'\n')
-	data = lxc[user_id].socket:readline(4096,{'\n%.%.%.\n'})
+	data = lxc[user_id].socket:read('\n%.%.%.\n')
 	
 	-- Write time last socket connection
 	lxc[user_id].time = os.time()
@@ -167,6 +157,5 @@ httpd:start()
 end
 
 return {
-start =	start()
-end
+start = function() start() end
 }
