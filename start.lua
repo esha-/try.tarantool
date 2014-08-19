@@ -5,8 +5,8 @@ local client = require('http.client')
 local yaml = require('yaml')
 
 box.cfg{
-	log_level = 5,
-	--logger = 'test_try.log'
+    log_level = 5,
+    --logger = 'test_try.log'
 }
 
 print(package.path)
