@@ -13,25 +13,21 @@
 <h>Tarantool terminal</h>
 <script>
 jQuery(document).ready(function($){
-	$.get("/tarantool?command=",{},
-			function(data) {
-				if (data.charAt(0) == 'S')
-					alert(data);
-	});
-	$('body').terminal(
-		function(command, term) {
-          if (command) {
-			command = "/tarantool?command=" + encodeURI(command)
-    		$.get(command,
-			function(data) {
-				console.log(data);
-				term.resume().echo(data);
-			}, 'text');
-    	 term.pause(); }
+    $.get("/tarantool?command=",{},function(data) { if (data.charAt(0) == 'S') alert(data); });
+    $('body').terminal(
+        function(command, term) {
+            if (command) {
+                command = "/tarantool?command=" + encodeURI(command)
+                $.get(command, function(data) {
+                                   console.log(data);
+                                   term.resume().echo(data);
+                               }, 'text');
+                term.pause();
+            }
         }, {
-        greetings: "=======================================",
-        height: 200,
-        prompt: 'tarantool> '
+            greetings: "=======================================",
+            height: 200,
+            prompt: 'tarantool> '
         });
 });
 
