@@ -21,10 +21,10 @@ local SOCKET_TIMEOUT = 0.2
 local START_LXC = 'sudo /usr/local/try-tarantool-org/container/tool.sh start ' 
 local RM_LXC = 'sudo /usr/local/try-tarantool-org/container/tool.sh stop '
 local TIME_DIFF = 1800
-local CLEANING_PERIOD = 3600i
+local CLEANING_PERIOD = 3600
 local SERVER_ERROR = 'Sorry! Server have problem. Please update web page.'
-local COOKIE_ERROR = 'Sorry! Cookies do not match ip adress. Please, clear cookies and update web pages'
-local LIMIT_ERROR = 'Sorry! Users limit exceeded! Please, close some session'
+local COOKIE_ERROR = 'Sorry! Cookies do not match ip adress. Please, clear cookies and update web pages.'
+local LIMIT_ERROR = 'Sorry! Users limit exceeded! Please, close some session.'
 
 local function start()
 
@@ -132,11 +132,9 @@ function handler (self)
 -- User get container from container table(lxc[])$
         log.info('%s: User got container with host = %s', user_id, lxc[user_id].host)
     end
-
 -- Check that socket connection have
     if lxc[user_id].socket then
         log.info ('%s: Had socket connection', user_id) 
-
 -- Send message to tarantool in container and get answer
         log.info('%s: Started and get answer', user_id)
         local command = self.req:param('command')
@@ -171,7 +169,6 @@ httpd:route({ path = '/tarantool' }, handler)
 httpd:start()
 -- Random init
 math.randomseed(tonumber(require('fiber').time64()))
-
 
 end
 
