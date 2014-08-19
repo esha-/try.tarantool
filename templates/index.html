@@ -7,29 +7,25 @@
     <script src="http://code.jquery.com/jquery-1.11.1.js"></script>
     <script src="./js/jquery.mousewheel-min.js"></script>
     <script src="./js/jquery.terminal-min.js"></script>
-    <script src="http://yamltojson.com/js/yaml.js"></script>
     <link href="./css/jquery.terminal.css" rel="stylesheet">
   </head>
 <body class="terminal">
 <h>Tarantool terminal</h>
 <script>
-jQuery(document).ready(function($) {
+jQuery(document).ready(function($){
 	$.get("/tarantool?command=",{},
 			function(data) {
-				if (data == 'errors')
-					alert('Sorry! Server have problem. Please update web page.');
+				if (data.charAt(0) == 'S')
+					alert(data);
 	});
 	$('body').terminal(
 		function(command, term) {
           if (command) {
-			command = "/tarantool?command="+command
-			command = encodeURI(command)
+			command = "/tarantool?command=" + encodeURI(command)
     		$.get(command,
-			//$.get( "/tarantool",{command:command},
 			function(data) {
 				console.log(data);
-				if (data == 'errors') term.echo('Sorry! Server have problem. Please update web pages.')	 
-				else term.resume().echo(data);
+				term.resume().echo(data);
 			}, 'text');
     	 term.pause(); }
         }, {
