@@ -1,7 +1,7 @@
 #!/usr/bin/env tarantool
 -- This script for start and work try.tarantool.org. 
 -- Try.tarantool is web pages with terminal that user can use
--- such us tarantool terminal and try tarantool uses cases 
+-- tarantool console and try tarantool uses cases 
 
 local io = require('io')
 local os = require('os')
